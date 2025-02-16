@@ -1,25 +1,21 @@
-import okio.FileSystem
-import okio.Path.Companion.toPath
+import kotlinx.io.Source
+import kotlinx.io.readByteArray
+import kotlinx.io.readIntLe
 
 class TokenizerUtils {
     companion object {
         fun buildTokenizer(
-            fileSystem: FileSystem,
-            vocabSize: Int,
-            path: String = "tokenizer.bin",
-            projectRoot: String = "../"
+            source: Source,
+            vocabSize: Int
         ): Tokenizer {
             val vocab = arrayOfNulls<String>(vocabSize)
             val vocabScores = FloatArray(vocabSize)
-            fileSystem.read("$projectRoot/$path".toPath()) {
-                val maxTokenLength = this.readIntLe()
-                for (i in 0 until vocabSize) {
-                    vocabScores[i] = this.readFloatLe()
-                    val len = this.readIntLe()
-                    val bytes = ByteArray(len)
-                    this.readFully(bytes)
-                    vocab[i] = bytes.decodeToString()
-                }
+            val maxTokenLength = source.readIntLe()
+            for (i in 0 until vocabSize) {
+                vocabScores[i] = source.readFloatLe()
+                val len = source.readIntLe()
+                val bytes = source.readByteArray(len)
+                vocab[i] = bytes.decodeToString()
             }
             return TokenizerImpl(vocab, vocabScores)
         }

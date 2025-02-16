@@ -1,10 +1,12 @@
-import okio.BufferedSource
+import kotlinx.io.Source
+import kotlinx.io.readByteArray
 
-fun BufferedSource.readFloatLe(): Float {
+
+fun Source.readFloatLe(): Float {
     return bytesToFloat(readByteArray(4))
 }
 
-fun BufferedSource.readFloatLeArray(size: Int): FloatArray {
+fun Source.readFloatLeArray(size: Int): FloatArray {
     val floats = FloatArray(size)
     for (i in 0 until size) {
         floats[i] = readFloatLe()

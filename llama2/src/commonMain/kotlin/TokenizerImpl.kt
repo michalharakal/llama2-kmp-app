@@ -71,12 +71,20 @@ class TokenizerImpl(
 
     override fun decode(token: Int): String {
         // following BOS token (1), sentence piece decoder strips any leading whitespace (see PR#89)
-        val tokenStr = if (token == 1 && vocab[token]!![0] == ' ') {
-            vocab[token]!!.substring(1)
-        } else {
-            vocab[token]!!
+        try {
+            if (vocab[token] == null) {
+                return ""
+            }
+            val tokenStr = if (token == 1 && vocab[token]!![0] == ' ') {
+
+                vocab[token]!!.substring(1)
+            } else {
+                vocab[token]!!
+            }
+            return tokenStr
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to find token $token in vocab")
         }
-        return tokenStr
     }
 
     override fun decode(tokens: IntArray): String {

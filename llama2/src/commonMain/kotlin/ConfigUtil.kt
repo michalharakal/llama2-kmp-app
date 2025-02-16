@@ -1,10 +1,11 @@
-import okio.BufferedSource
+import kotlinx.io.Source
+import kotlinx.io.readIntLe
 import kotlin.math.abs
 
 class ConfigUtil {
 
     companion object {
-        fun from(buffer: BufferedSource): Config {
+        fun from(buffer: Source): Config {
             val dim = buffer.readIntLe()
             val hiddenDim = buffer.readIntLe()
             val nLayers = buffer.readIntLe()

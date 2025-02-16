@@ -1,88 +1,59 @@
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsExec
-import org.jetbrains.kotlin.gradle.targets.js.nodejs.NodeJsRootExtension
-import org.jetbrains.kotlin.gradle.targets.js.npm.tasks.KotlinNpmInstallTask
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import kotlin.apply
 
 plugins {
     kotlin("multiplatform")
+    alias(libs.plugins.androidLibrary)
 }
 
-val arguments: Provider<String> = providers.gradleProperty("runArgs")
-
 kotlin {
+    androidTarget {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
+    }
+
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
+
     jvm()
-    mingwX64 {
-        binaries {
-            executable()
-        }
-    }
-    macosX64 {
-        binaries {
-            executable()
-        }
-    }
-    linuxX64 {
-        binaries {
-            executable()
-        }
-    }
-    js {
-        nodejs {
-            binaries.executable()
-            runTask {
-                args(arguments.orNull?.split(" ") ?: emptyList<String>())
-            }
-        }
-    }
 
-    // Still broken
-    @OptIn(ExperimentalWasmDsl::class)
+    @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
-        binaries.executable()
-        nodejs {
-            runTask {
-                args(arguments.orNull?.split(" ") ?: emptyList<String>())
+        browser {
+            val rootDirPath = project.rootDir.path
+            val projectDirPath = project.projectDir.path
+            commonWebpackConfig {
+                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
+                    static = (static ?: mutableListOf()).apply {
+                        // Serve sources to debug inside browser
+                        add(rootDirPath)
+                        add(projectDirPath)
+                    }
+                }
             }
         }
-    }
-
-    // Still broken
-    @OptIn(ExperimentalWasmDsl::class)
-    wasmWasi {
-        binaries.executable()
-        nodejs()
     }
 
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                implementation("com.squareup.okio:okio:3.9.0")
-            }
-        }
-        val jsMain by getting {
-            dependencies {
-                implementation("com.squareup.okio:okio-nodefilesystem:3.9.0")
-            }
-        }
-        val wasmJsMain by getting {
-            dependencies {
-                implementation("com.squareup.okio:okio-nodefilesystem:3.9.0")
-            }
+        commonMain.dependencies {
+            implementation(libs.kotlinx.io.core)
         }
     }
 }
 
-rootProject.the<NodeJsRootExtension>().apply {
-    version = "21.0.0-v8-canary20231019bd785be450"
-    downloadBaseUrl = "https://nodejs.org/download/v8-canary"
-}
-
-tasks.withType<NodeJsExec>().configureEach {
-    args?.add("--experimental-wasm-gc")
-}
-
-val configureExec: (Exec).() -> Unit = {
-    argumentProviders.add(CommandLineArgumentProvider {
-        arguments.orNull?.split(" ") ?: emptyList()
-    })
+android {
+    namespace = "sk.ai.net.client.arc.ui.shared"
+    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    defaultConfig {
+        minSdk = libs.versions.android.minSdk.get().toInt()
+    }
 }
