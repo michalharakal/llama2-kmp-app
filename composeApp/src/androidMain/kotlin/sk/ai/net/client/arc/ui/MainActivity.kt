@@ -22,7 +22,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             if ((tokenizerInputStream != null) && (storiesInputStream != null)) {
                 val llama2 =
-                    Llama2Model(tokenizerInputStream.asSource().buffered(), storiesInputStream.asSource().buffered())
+                    Llama2Model(
+                        modelSource = storiesInputStream.asSource().buffered(),
+                        tokenizerSource = tokenizerInputStream.asSource().buffered()
+                    )
                 App(llama2)
             }
         }
