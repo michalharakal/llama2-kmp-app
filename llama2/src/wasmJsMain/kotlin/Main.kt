@@ -1,4 +1,6 @@
-import okio.fakefilesystem.FakeFileSystem
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlin.time.measureTime
 
 @JsModule("process")
@@ -9,6 +11,7 @@ external object process {
 
 fun <T> JsArray<JsAny>.map(f: (JsAny) -> T) =
     (0..this.length).mapNotNull { this[it] }.map(f)
+
 fun main() {
     val args = process.argv.map { it.toString() }.toTypedArray().sliceArray(2 until process.argv.length)
     println(args.map { it.toString() })
@@ -40,34 +43,39 @@ fun main() {
     if (args.size >= 4) {
         prompt = args[3]
     }
-    val fileSystem = FakeFileSystem()
+    //val fileSystem = FakeFileSystem()
 
-    val model = Llama2Utils.buildLlama2(
-        fileSystem,
-        checkPoint,
-        projectRoot
-    )
+    SystemFileSystem.source(Path("stories15M.bin")).buffered().use { stories ->
+        SystemFileSystem.source(Path("tokenizer.bin")).buffered().use { tokenizer ->
+            //sink.writeUtf8("Hello, world!")
 
-    val tokenize = TokenizerUtils.buildTokenizer(
-        fileSystem,
-        model.config.vocabSize,
-        projectRoot = projectRoot
-    )
 
-    // process the prompt, if any
-    val promptTokens: IntArray = if (prompt != null) {
-        tokenize.encode(prompt)
-    } else {
-        IntArray(0)
-    }
+            val model = Llama2Utils.buildLlama2(
+                stories,
+            )
 
-    val time = measureTime{
-        model.generate(promptTokens, steps, temperature) { next ->
-            // following BOS token (1), sentencepiece decoder strips any leading whitespace (see PR#89)
-            val tokenStr = tokenize.decode(next)
-            print(tokenStr)
+            val tokenize = TokenizerUtils.buildTokenizer(
+                tokenizer,
+                model.config.vocabSize
+            )
+
+            // process the prompt, if any
+            val promptTokens: IntArray = if (prompt != null) {
+                tokenize.encode(prompt)
+            } else {
+                IntArray(0)
+            }
+
+            val time = measureTime {
+                model.generate(promptTokens, steps, temperature) { next ->
+                    // following BOS token (1), sentencepiece decoder strips any leading whitespace (see PR#89)
+                    val tokenStr = tokenize.decode(next)
+                    print(tokenStr)
+                }
+            }.inWholeMilliseconds
+            // report achieved tok/s
+            println("\n\nachieved tok/s: ${(steps) / time.toDouble() * 1000}")
+
         }
-    }.inWholeMilliseconds
-    // report achieved tok/s
-    println("\n\nachieved tok/s: ${(steps) / time.toDouble() * 1000}")
+    }
 }

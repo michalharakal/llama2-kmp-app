@@ -40,6 +40,7 @@ bin/
 
 ### LLM's
 stories15M.bin
+tokenizer.bin
 
 ### Kotlin
 .kotlin/
